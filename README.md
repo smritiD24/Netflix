@@ -25,8 +25,8 @@ netflix-sql-analysis/
 │
 ├── README.md                        -- you're reading it
 ├── logo.png                         -- Netflix logo
-├── schema_setup.sql                 -- table creation
-├── solutions.sql                    -- all 15 business problem solutions
+├── netflix.sql
+├── dataset             
 └── additional_problems.sql          -- 5 extra questions I added
 ```
 
