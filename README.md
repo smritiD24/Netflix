@@ -1,9 +1,5 @@
-<p align="center">
-  <img src="logo.png" width="250" alt="Netflix Logo">
-</p>
-
 # Netflix SQL Data Analysis Project
-
+![LOGO](https://github.com/smritiD24/Netflix/blob/main/Netflix_Logo)
 ## About This Project
 
 Netflix has one of the most publicly discussed content libraries in the world, so I thought it'd be interesting to go beyond just "how many movies vs shows" and actually dig into content patterns — which countries produce the most, how ratings are distributed, what genres dominate, and whether you can spot anything meaningful in the descriptions themselves.
