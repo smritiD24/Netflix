@@ -1,0 +1,134 @@
+-- ============================================================
+-- Netflix SQL Project - Additional Problems (Q16 to Q20)
+-- Written independently after completing the core 15 questions
+-- ============================================================
+
+
+-- Q.16 Which Month Has the Most Content Added Historically?
+-- -----------------------------------------------------------
+-- Netflix adds content throughout the year but certain months tend to be heavier.
+-- Find which month (across all years) has the highest total additions.
+
+SELECT 
+    TO_CHAR(TO_DATE(date_added, 'Month DD, YYYY'), 'Month') AS month_name,
+    EXTRACT(MONTH FROM TO_DATE(date_added, 'Month DD, YYYY')) AS month_num,
+    COUNT(*) AS titles_added
+FROM netflix
+WHERE date_added IS NOT NULL
+GROUP BY 1, 2
+ORDER BY titles_added DESC;
+
+-- Note: month_num is included just to help verify the sort order is correct.
+-- January additions being high often means content was held and released at year start.
+
+
+-- Q.17 Countries That Produce Both Movies and TV Shows
+-- -----------------------------------------------------------
+-- Some countries only produce one content type on Netflix.
+-- Find countries that have contributed BOTH Movies and TV Shows.
+
+-- Approach: UNNEST countries, group by country + type, then filter
+-- for countries where COUNT(DISTINCT type) = 2
+
+WITH country_types AS (
+    SELECT 
+        TRIM(UNNEST(STRING_TO_ARRAY(country, ','))) AS country,
+        type
+    FROM netflix
+    WHERE country IS NOT NULL
+)
+SELECT 
+    country,
+    COUNT(DISTINCT type) AS content_types,
+    STRING_AGG(DISTINCT type, ' & ') AS types_present
+FROM country_types
+GROUP BY country
+HAVING COUNT(DISTINCT type) = 2
+ORDER BY country;
+
+
+-- Q.18 Directors with Most Titles — Split by Movies vs TV Shows
+-- -----------------------------------------------------------
+-- Who are the most prolific directors on Netflix, and do they specialize
+-- in Movies or TV Shows?
+
+WITH director_content AS (
+    SELECT 
+        TRIM(UNNEST(STRING_TO_ARRAY(director, ','))) AS director_name,
+        type
+    FROM netflix
+    WHERE director IS NOT NULL
+)
+SELECT 
+    director_name,
+    COUNT(*) AS total_titles,
+    COUNT(CASE WHEN type = 'Movie' THEN 1 END) AS movies,
+    COUNT(CASE WHEN type = 'TV Show' THEN 1 END) AS tv_shows
+FROM director_content
+GROUP BY director_name
+HAVING COUNT(*) >= 3  -- only directors with at least 3 titles to filter noise
+ORDER BY total_titles DESC
+LIMIT 20;
+
+
+-- Q.19 Gap Between Release Year and Netflix Addition
+-- -----------------------------------------------------------
+-- How many years after a title's release did it get added to Netflix?
+-- Small gap = fresh/original content. Large gap = catalogue/library content.
+
+SELECT 
+    title,
+    type,
+    release_year,
+    EXTRACT(YEAR FROM TO_DATE(date_added, 'Month DD, YYYY')) AS year_added,
+    EXTRACT(YEAR FROM TO_DATE(date_added, 'Month DD, YYYY')) - release_year AS years_gap
+FROM netflix
+WHERE date_added IS NOT NULL
+  AND release_year IS NOT NULL
+ORDER BY years_gap DESC;
+
+-- Titles with gap = 0 or 1 are likely Netflix Originals or day-one acquisitions.
+-- Titles with gap > 10 are deep catalogue picks -- older content brought in to fill library.
+
+
+-- Q.20 Rating Distribution for Top 5 Content-Producing Countries
+-- -----------------------------------------------------------
+-- For the 5 countries with the most content, how are ratings distributed?
+-- Shows whether different countries target different audience segments.
+
+WITH top_countries AS (
+    SELECT 
+        TRIM(UNNEST(STRING_TO_ARRAY(country, ','))) AS country,
+        COUNT(*) AS total
+    FROM netflix
+    WHERE country IS NOT NULL
+    GROUP BY 1
+    ORDER BY total DESC
+    LIMIT 5
+),
+country_ratings AS (
+    SELECT 
+        TRIM(UNNEST(STRING_TO_ARRAY(n.country, ','))) AS country,
+        n.rating,
+        COUNT(*) AS count
+    FROM netflix AS n
+    WHERE n.country IS NOT NULL
+      AND n.rating IS NOT NULL
+    GROUP BY 1, 2
+)
+SELECT 
+    cr.country,
+    cr.rating,
+    cr.count,
+    ROUND(cr.count::numeric / SUM(cr.count) OVER(PARTITION BY cr.country) * 100, 1) AS pct_of_country
+FROM country_ratings AS cr
+WHERE cr.country IN (SELECT country FROM top_countries)
+ORDER BY cr.country, cr.count DESC;
+
+-- pct_of_country shows what % of that country's content falls under each rating.
+-- Useful for spotting: does India skew more family-friendly? Does US skew TV-MA?
+
+
+-- ============================================================
+-- End of Additional Problems
+-- ============================================================
